@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英打遊戲版本四 - 十鍵掉落練習</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-color: #f8f9fa;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .header {
+      width: 100%;
+      max-width: 650px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .back-link {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .game-card {
+      background: #ffffff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 650px;
+      box-sizing: border-box;
+    }
+    .settings-panel {
+      background: #e9ecef;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      font-size: 0.95rem;
+    }
+    .settings-panel label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .game-area {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      background: #111827;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    .falling-char {
+      position: absolute;
+      width: 45px;
+      height: 45px;
+      background: #007bff;
+      color: white;
+      font-size: 1.8rem;
+      font-weight: bold;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 10px rgba(0, 123, 255, 0.8);
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .controls button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      color: white;
+    }
+    .btn-start { background: #007bff; }
+    .btn-pause { background: #ffc107; color: #333 !important; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <a href="../index.html" class="back-link">← 返回歷程首頁</a>
+    <h2>版本四：十鍵掉落練習</h2>
+  </div>
+
+  <div class="game-card">
+    <div class="settings-panel">
+      <label>
+        落地時間：<span id="speed-val">8</span> 秒
+        <input type="range" id="speed-slider" min="3" max="14" value="8">
+      </label>
+      <label>
+        <input type="checkbox" id="accel-check"> 漸進加速（每答對3題縮短1秒）
+      </label>
+    </div>
+
+    <div class="stats">
+      <div>題數：<span id="round-count">0</span> / 10</div>
+      <div>得分：<span id="score">0</span></div>
+      <div>落地未按：<span id="miss-count">0</span></div>
+    </div>
+
+    <div class="game-area" id="game-area">
+      <div class="falling-char" id="falling-char" style="display: none;">A</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-start" id="start-btn">開始 / 重新開始</button>
+      <button class="btn-pause" id="pause-btn">暫停 / 繼續</button>
+    </div>
+  </div>
+
+  <script>
+    const keys = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ';'];
+    let score = 0, missCount = 0, roundCount = 0;
+    let isPlaying = false, isPaused = false;
+    let currentTarget = '', fallPosY = 0;
+    let baseTime = 8, currentDuration = 8;
+    let animFrameId = null, lastTimeStamp = 0;
+
+    const charEl = document.getElementById('falling-char');
+    const areaEl = document.getElementById('game-area');
+    const scoreEl = document.getElementById('score');
+    const missEl = document.getElementById('miss-count');
+    const roundEl = document.getElementById('round-count');
+    const slider = document.getElementById('speed-slider');
+    const speedVal = document.getElementById('speed-val');
+    const accelCheck = document.getElementById('accel-check');
+
+    slider.addEventListener('input', (e) => {
+      baseTime = parseInt(e.target.value);
+      speedVal.textContent = baseTime;
+    });
+
+    function spawnChar() {
+      if (roundCount >= 10) {
+        endGame();
+        return;
+      }
+      roundCount++;
+      roundEl.textContent = roundCount;
+      
+      currentTarget = keys[Math.floor(Math.random() * keys.length)];
+      charEl.textContent = currentTarget;
+      fallPosY = 0;
+      charEl.style.top = '0px';
+      charEl.style.display = 'flex';
+
+      if (accelCheck.checked) {
+        const speedUp = Math.floor(score / 3);
+        currentDuration = Math.max(3, baseTime - speedUp);
+      } else {
+        currentDuration = baseTime;
+      }
+
+      lastTimeStamp = performance.now();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function gameLoop(now) {
+      if (!isPlaying || isPaused) return;
+      const dt = (now - lastTimeStamp) / 1000;
+      lastTimeStamp = now;
+
+      const maxY = areaEl.clientHeight - 45;
+      fallPosY += (maxY / currentDuration) * dt;
+      charEl.style.top = `${fallPosY}px`;
+
+      if (fallPosY >= maxY) {
+        missCount++;
+        missEl.textContent = missCount;
+        spawnChar();
+      } else {
+        animFrameId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function endGame() {
+      isPlaying = false;
+      charEl.style.display = 'none';
+      alert(`一回合結束！\n總得分：${score}\n落地未按：${missCount}`);
+    }
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+      score = 0; missCount = 0; roundCount = 0;
+      scoreEl.textContent = 0; missEl.textContent = 0; roundEl.textContent = 0;
+      isPlaying = true; isPaused = false;
+      spawnChar();
+    });
+
+    document.getElementById('pause-btn').addEventListener('click', () => {
+      if (!isPlaying) return;
+      isPaused = !isPaused;
+      if (!isPaused) {
+        lastTimeStamp = performance.now();
+        animFrameId = requestAnimationFrame(gameLoop);
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (!isPlaying || isPaused || e.repeat) return;
+      let key = e.key.toUpperCase();
+      if (e.key === ';') key = ';';
+
+      if (key === currentTarget) {
+        score++;
+        scoreEl.textContent = score;
+        cancelAnimationFrame(animFrameId);
+        spawnChar();
+      }
+    });
+  </script>
+</body>
+</html>

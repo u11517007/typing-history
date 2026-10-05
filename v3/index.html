@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英打遊戲版本三 - ASDF 練習</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #f8f9fa;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .header {
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .back-link {
+      color: #007bff;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .game-card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 100%;
+      max-width: 600px;
+      box-sizing: border-box;
+    }
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      font-weight: bold;
+      color: #333;
+    }
+    .target-box {
+      font-size: 4rem;
+      font-weight: bold;
+      color: #007bff;
+      height: 100px;
+      line-height: 100px;
+      background: #e9ecef;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .keyboard {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+    .key {
+      width: 60px;
+      height: 60px;
+      background: #e0e0e0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #333;
+      position: relative;
+      transition: all 0.1s ease;
+    }
+    .key.active {
+      background: #28a745;
+      color: white;
+      transform: scale(1.05);
+      box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+    }
+    .key.active::after {
+      content: '';
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 12px;
+      height: 12px;
+      background: #dc3545;
+      border-radius: 50%;
+    }
+    .controls button {
+      padding: 10px 24px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 0 5px;
+      color: white;
+    }
+    .btn-start { background: #007bff; }
+    .btn-stop { background: #dc3545; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <!-- 回首頁連結使用 ../index.html 回上一層 -->
+    <a href="../index.html" class="back-link">← 返回歷程首頁</a>
+    <h2>版本三：ASDF 鍵盤練習</h2>
+  </div>
+
+  <div class="game-card">
+    <div class="stats">
+      <div>得分：<span id="score">0</span></div>
+    </div>
+
+    <div class="target-box" id="target-char">-</div>
+
+    <div class="keyboard">
+      <div class="key" id="key-A">A</div>
+      <div class="key" id="key-S">S</div>
+      <div class="key" id="key-D">D</div>
+      <div class="key" id="key-F">F</div>
+    </div>
+
+    <div class="controls">
+      <button class="btn-start" id="start-btn">開始 / 重新開始</button>
+      <button class="btn-stop" id="stop-btn">停止</button>
+    </div>
+  </div>
+
+  <script>
+    const keys = ['A', 'S', 'D', 'F'];
+    let currentTarget = '';
+    let score = 0;
+    let isPlaying = false;
+
+    const targetEl = document.getElementById('target-char');
+    const scoreEl = document.getElementById('score');
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+
+    function nextQuestion() {
+      const randomIndex = Math.floor(Math.random() * keys.length);
+      currentTarget = keys[randomIndex];
+      targetEl.textContent = currentTarget;
+
+      // 清除按鈕高亮亮點
+      keys.forEach(k => document.getElementById(`key-${k}`).classList.remove('active'));
+      // 亮起目標按鍵
+      document.getElementById(`key-${currentTarget}`).classList.add('active');
+    }
+
+    startBtn.addEventListener('click', () => {
+      isPlaying = true;
+      score = 0;
+      scoreEl.textContent = score;
+      nextQuestion();
+    });
+
+    stopBtn.addEventListener('click', () => {
+      isPlaying = false;
+      currentTarget = '';
+      targetEl.textContent = '-';
+      keys.forEach(k => document.getElementById(`key-${k}`).classList.remove('active'));
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (!isPlaying || e.repeat) return; // 長按不連續計分
+
+      const inputKey = e.key.toUpperCase();
+      if (keys.includes(inputKey)) {
+        if (inputKey === currentTarget) {
+          score++;
+          scoreEl.textContent = score;
+          nextQuestion(); // 按對換題
+        }
+        // 按錯不加分、保留原題
+      }
+    });
+  </script>
+</body>
+</html>
